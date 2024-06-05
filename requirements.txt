@@ -1,0 +1,10 @@
+ipykernel
+numpy
+openai
+openpyxl
+beautifulsoup4
+google
+requests
+
+
+streamlit 
