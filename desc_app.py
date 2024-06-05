@@ -241,7 +241,8 @@ def main():
 
             if st.download_button(
                     label=f"Descargar descripciones validas {len(df_enlaces_validos)}",
-                    data=convert_df_to_xlsx(df_enlaces_validos),
+                    data=convert_df_to_xlsx(df_enlaces_validos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
+                                    ]]),
                     file_name=f'{file_name}_descripciones.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 ):
@@ -250,7 +251,8 @@ def main():
             if len(df_enlaces_invalidos)>0:
                 if st.download_button(
                     label=f"Descargar descripciones para revision {len(df_enlaces_invalidos)}",
-                    data=convert_df_to_xlsx(df_enlaces_invalidos),
+                    data=convert_df_to_xlsx(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
+                                    ]]),
                     file_name=f'{file_name}_descripciones_a_revisar.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 ):
