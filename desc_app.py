@@ -131,7 +131,7 @@ def main():
     )
 
     st.markdown('<div class="center-image">', unsafe_allow_html=True)
-    st.image(image, caption='Imagen desde un archivo local')
+    st.image(image, caption='Formato del archivo excel a subir')
     st.markdown('</div>', unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader("Sube tu archivo de Excel", type=["xlsx", "xls"])
