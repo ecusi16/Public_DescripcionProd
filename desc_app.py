@@ -107,6 +107,18 @@ def main():
     try:
         df_enlaces_invalidos = None
         df_enlaces_validos = None
+        st.markdown(
+            """
+            <style>
+            .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+            .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+            .viewerBadge_text__1JaDK {
+                display: none;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         st.title("Generador de descripciones productos")
         st.write("Por favor, asegúrate de que el archivo Excel que subas empiece en la fila 1 (como la imagen inferior), tenga los encabezados en minúscula y sin acentos, y que contenga obligatoriamente las siguientes tres columnas: ")
         lista = ["**codigo** para el código de barras", "**marca** para la marca del producto", "**nombre** para el nombre del producto"]
