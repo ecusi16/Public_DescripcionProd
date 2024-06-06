@@ -11,6 +11,8 @@ from io import BytesIO
 import concurrent.futures
 from datetime import datetime
 import numpy as np
+
+
 # Función principal para paralelizar la tarea
 def parallel_apply_formatting(df, columns, func, num_workers=4):
     df_split = np.array_split(df, num_workers)
@@ -102,9 +104,23 @@ def apply_formatting(df, column, func):
     df[column] = df[column].apply(func)
     return df
 
+# Función para verificar columnas requeridas
+def check_required_columns(df, required_columns):
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        return False, missing_columns
+    return True, []
+
+# Función para verificar filas vacías
+def check_empty_rows(df):
+    empty_rows = df[df.isnull().all(axis=1)]
+    return empty_rows
+
 # Función principal de la aplicación
 def main():
     try:
+        # Definir columnas requeridas
+        required_columns = ['codigo', 'marca', 'nombre']
         df_enlaces_invalidos = None
         df_enlaces_validos = None
         st.markdown(
@@ -151,9 +167,20 @@ def main():
         
         if uploaded_file:
             df = pd.read_excel(uploaded_file, header=0)
-            st.write("Vista previa de los datos:")
+            # Verificar columnas requeridas
+            is_valid, missing_columns = check_required_columns(df, required_columns)
+            
+            if not is_valid:
+                df = pd.DataFrame({'codigo': [], 'marca': [], 'nombre': []})
+                st.error(f"El archivo cargado no contiene las columnas requeridas: {', '.join(missing_columns)}")
 
-            st.dataframe(df[['codigo', 'marca', 'nombre']])#'CODIGO DE FABRICA', 'MARCA', 'DESCRIPCION DEL ARTICULO']])
+            # Verificar filas vacías
+            empty_rows = check_empty_rows(df)
+            if not empty_rows.empty:
+                df = pd.DataFrame({'codigo': [], 'marca': [], 'nombre': []})
+                st.error("El archivo contiene filas completamente vacías, por favor virifique que el archivo no contenga filas vacias y que solo tenga una cabecera general ('codigo', 'marca', 'nombre')")
+            st.write("Vista previa de los datos:")
+            st.dataframe(df[['codigo', 'marca', 'nombre']])
             
             # Campo de entrada para el nombre del archivo
             export_file = os.path.splitext(uploaded_file.name)[0]
