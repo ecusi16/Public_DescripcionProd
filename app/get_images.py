@@ -41,16 +41,12 @@ def obtener_enlaces_busqueda(row):
             enlaces.append(resultado)
         if len(enlaces) == num_links:
             break
-    print(query)
-    print(enlaces)
     if len(enlaces)==0:
         for i, resultado in enumerate(search(second_option, country="BO"), 1):
             if not es_enlace_video(resultado) and es_enlace_valido(resultado):
                 enlaces.append(resultado)
             if len(enlaces) == num_links:
                 break
-        print(second_option)
-        print(enlaces)
     return enlaces
 
 def buscar_articulo(nombre_articulo):
@@ -83,8 +79,6 @@ def obtener_3_imagenes(lista_urls):
                 re.compile(r'.*gallery.*'),
                 # Agrega otros patrones aquí
             ]
-
-            
 
             # Buscar imágenes en posibles carruseles
             for pattern in carousel_patterns:

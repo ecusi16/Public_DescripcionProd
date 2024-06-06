@@ -2,119 +2,16 @@ import streamlit as st
 import os
 import pandas as pd
 from PIL import Image
-import io
-import requests
-from app.generador import get_description
-from app.get_images import obtener_imagenes_articulo, obtener_enlaces_busqueda, obtener_3_imagenes
-import json
-from io import BytesIO
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-import numpy as np
 
-
-# Función principal para paralelizar la tarea
-def parallel_apply_formatting(df, columns, func, num_workers=4):
-    df_split = np.array_split(df, num_workers)
-    # Lista para guardar las futuras particiones
-    futures = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        for part in df_split:
-            for column in columns:
-                futures.append(executor.submit(apply_formatting, part, column,func))
-                
-        # Esperar y recolectar los resultados, preservando los índices originales
-        results = [future.result() for future in futures]
-    
-    # Concatenar las particiones preservando los índices
-    final_df = pd.concat(results).sort_index()
-    
-    return final_df
-
-# Función para aplicar verificar_fila_enlaces a una partición del DataFrame
-def verificar_enlaces_partition(partition, enlaces_col, imagenes_col):
-    partition['enlaces_validos'] = partition.apply(lambda x: verificar_fila_enlaces(x, enlaces_col, imagenes_col), axis=1)
-    return partition
-
-# Función principal para paralelizar la verificación
-def parallel_verificar_enlaces(df, enlaces_col, imagenes_col, num_workers=4):
-    df_split = np.array_split(df, num_workers)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = [executor.submit(verificar_enlaces_partition, part, enlaces_col, imagenes_col) for part in df_split]
-        results = [future.result() for future in futures]
-    return pd.concat(results)
-# Opción para descargar el archivo con descripciones
-def convert_df_to_xlsx(dataframe):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        dataframe.to_excel(writer, index=False, sheet_name='Sheet1')
-    return output.getvalue()
-
-# Formatear las columnas de listas como viñetas
-def format_list_as_bullets(lst):
-    try:
-        if len(lst)==0: #pd.isna(lst):
-            return ""
-        items = lst #.split(", ")
-        return "<ul>" + "".join(f"<li>{item}</li>" for item in items) + "</ul>"
-    except Exception as e:
-        return ""
-
-# Formatear las columnas de listas como viñetas y enlaces clicables
-def format_list_as_bullets_and_links(lst):
-    try:
-        if len(lst)==0: #pd.isna(lst):
-            return ""
-        items = lst #.split(", ")
-        return "<ul>" + "".join(f"<li><a href='{item}' target='_blank'>{item}</a></li>" for item in items) + "</ul>"
-    except Exception as e:
-        return ""
-
-# Función para manejar imágenes embebidas
-def fetch_image(url):
-    response = requests.get(url)
-    img = Image.open(io.BytesIO(response.content))
-    return img
-
-# Función para aplicar web scraping en paralelo
-def aplicar_en_paralelo(df, func, max_workers=5):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        resultados = list(executor.map(func, [row for index, row in df.iterrows()]))
-    return resultados
-
-# Función para verificar si un enlace es válido
-def es_enlace_valido(url):
-    try:
-        response = requests.head(url, allow_redirects=True)
-        return response.status_code == 200
-    except requests.RequestException:
-        return False
-
-# Función para verificar todos los enlaces en una fila
-def verificar_fila_enlaces(row, key1, key2):
-    for link in row[key1] + row[key2]:
-        if  (not es_enlace_valido(link)):
-            return False
-    return True
-
-# Función para aplicar la formateo a una columna
-def apply_formatting(df, column, func):
-    print(column)
-    df[column] = df[column].apply(func)
-    return df
-
-# Función para verificar columnas requeridas
-def check_required_columns(df, required_columns):
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        return False, missing_columns
-    return True, []
-
-# Función para verificar filas vacías
-def check_empty_rows(df):
-    empty_rows = df[df.isnull().all(axis=1)]
-    return empty_rows
+from app.generador import get_description
+from app.get_images import obtener_enlaces_busqueda, obtener_3_imagenes
+from app.helper import format_list_as_bullets, format_list_as_bullets_and_links
+from app.helper import check_required_columns, check_empty_rows, verificar_fila_enlaces
+from app.helper import convert_df_to_xlsx
+from app.helper import aplicar_en_paralelo, parallel_verificar_enlaces
+from app.styles import style_hide_github_icon, style_centrar_imagen, style_tabla
 
 # Función principal de la aplicación
 def main():
@@ -123,18 +20,8 @@ def main():
         required_columns = ['codigo', 'marca', 'nombre']
         df_enlaces_invalidos = None
         df_enlaces_validos = None
-        st.markdown(
-            """
-            <style>
-            .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
-            .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
-            .viewerBadge_text__1JaDK {
-                display: none;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(style_hide_github_icon(), unsafe_allow_html=True)
+
         st.title("Generador de descripciones productos")
         st.write("Por favor, asegúrate de que el archivo Excel que subas empiece en la fila 1 (como la imagen inferior), tenga los encabezados en minúscula y sin acentos, y que contenga obligatoriamente las siguientes tres columnas: ")
         lista = ["**codigo** para el código de barras", "**marca** para la marca del producto", "**nombre** para el nombre del producto"]
@@ -147,17 +34,7 @@ def main():
         image = Image.open(image_path)
 
         # Centrar la imagen usando HTML en st.markdown
-        st.markdown(
-            """
-            <style>
-            .center-image {
-                display: flex;
-                justify-content: center;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(style_centrar_imagen(), unsafe_allow_html=True)
 
         st.markdown('<div class="center-image">', unsafe_allow_html=True)
         st.image(image, caption='Formato del archivo excel a subir')
@@ -211,7 +88,7 @@ def main():
 
                     t1 = datetime.now()
                     # Procesar filas en paralelo
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                    with ThreadPoolExecutor() as executor:
                         # add links sencond version
                         results = list(executor.map(get_description, \
                                                     [subset_df[['codigo','marca', \
@@ -231,19 +108,20 @@ def main():
                     results_df = pd.DataFrame(json_result)
 
                     t1 = datetime.now()
-                    #['Codigo', 'Marca', 'Nombre', 'Especificaciones', 'Ventajas', 'Enlaces']
+
                     results_df['Especificaciones1'] = results_df['Especificaciones']
                     results_df['Ventajas1'] = results_df['Ventajas']
 
                     results_df['Especificaciones'] = results_df['Especificaciones'].apply(format_list_as_bullets)
                     results_df['Ventajas'] = results_df['Ventajas'].apply(format_list_as_bullets)
 
+                    df = df.rename(columns={'codigo': 'Codigo', 'marca': 'Marca', 'nombre': 'Nombre', 'enlaces': 'Enlaces'})
+                    results_df = df[['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces']].merge(\
+                        results_df[['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']], on='Codigo', how='left')
+
                     results_df['Enlaces1'] = results_df['Enlaces']
                     results_df['Enlaces'] = results_df['Enlaces'].apply(format_list_as_bullets_and_links)
 
-                    df = df.rename(columns={'codigo': 'Codigo', 'marca': 'Marca', 'nombre': 'Nombre'})
-                    results_df = df[['Codigo', 'Marca', 'Nombre','Imagenes']].merge(\
-                        results_df[['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas', 'Enlaces1', 'Enlaces']], on='Codigo', how='left')
                     results_df['Imagenes1'] = results_df['Imagenes']
                     results_df['Imagenes'] = results_df['Imagenes'].apply(format_list_as_bullets_and_links)
                     
@@ -271,20 +149,7 @@ def main():
                     df_enlaces_invalidos = results_df[results_df['enlaces_validos'] == False].drop(columns=['enlaces_validos'])
 
                     # Añadir CSS para ajustar el estilo de la tabla
-                    st.markdown(
-                        """
-                        <style>
-                        .dataframe tbody tr td {
-                            max-width: 150px;
-                            word-wrap: break-word;
-                            white-space: pre-wrap;
-                        }
-                        .dataframe tbody tr td ul {
-                            padding-left: 20px;  /* Ajustar el margen izquierdo de las viñetas */
-                        }
-                        </style>
-                        """, unsafe_allow_html=True
-                    )
+                    st.markdown( style_tabla() , unsafe_allow_html=True)
 
                     st.session_state['df_enlaces_validos'] = df_enlaces_validos
                     st.session_state['df_enlaces_invalidos'] = df_enlaces_invalidos
@@ -329,8 +194,8 @@ def main():
                     st.write(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
                                         ]].to_html(escape=False), unsafe_allow_html=True)
     except Exception as e:
+        print(e)
         st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")
-        #st.rerun()
     
             
         
