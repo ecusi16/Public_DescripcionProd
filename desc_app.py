@@ -149,7 +149,7 @@ def main():
 
                     df_enlaces_validos = results_df[results_df['enlaces_validos'] == True].drop(columns=['enlaces_validos'])
                     df_enlaces_invalidos = results_df[results_df['enlaces_validos'] == False].drop(columns=['enlaces_validos'])
-
+                    
                     # Añadir CSS para ajustar el estilo de la tabla
                     st.markdown( style_tabla() , unsafe_allow_html=True)
 
@@ -176,9 +176,10 @@ def main():
                         st.success("Archivo descripciones descargado")
 
                 if len(df_enlaces_invalidos)>0:
+                    df_enlaces_invalidos1 = df_enlaces_invalidos.rename(columns={'Codigo': 'codigo', 'Marca': 'marca', 'Nombre': 'nombre'})
                     if st.download_button(
                         label=f"Descargar descripciones para revision: {len(df_enlaces_invalidos)} productos",
-                        data=convert_df_to_xlsx(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
+                        data=convert_df_to_xlsx(df_enlaces_invalidos1[['codigo', 'marca', 'nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
                                         ]]),
                         file_name=f'{file_name}_descripciones_a_revisar.xlsx',
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
