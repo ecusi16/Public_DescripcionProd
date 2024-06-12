@@ -2,6 +2,7 @@ from openai import OpenAI
 import streamlit as st
 import re 
 import json
+import time
 
 
 # Configurar API de OpenAI
@@ -47,28 +48,38 @@ def get_description(product_json):
         },
     ]
 
-    client = OpenAI(api_key=YOUR_API_KEY, base_url="https://api.perplexity.ai")
+    retries = 5
+    delay = 5  # Puedes ajustar el tiempo de espera entre reintentos
+    
 
-    # chat completion without streaming
-    response = client.chat.completions.create(
-        model="llama-3-sonar-large-32k-online",
-        messages=messages,
-    )
-
-    respuesta = response.choices[0].message.content.strip()
-
-    json_match = re.search(r'\[\s*\{.*\}\s*\]', respuesta, re.DOTALL)
-
-    try:
-        json_content = json_match.group(0)
-        # Convertir el texto JSON en un objeto JSON de Python
-        json_data = json.loads(json_content)
-        return json_data
-    except Exception as e:
-        print(f"Error al decodificar JSON: {e}")
-        print(respuesta)
-        return json.loads('[]')
-    else:
-        print("No se encontró un bloque JSON en la cadena de entrada.")
-        print(respuesta)
-        return json.loads('[]')
+    for attempt in range(retries):
+        flag_answer = False
+        try:
+            # chat completion without streaming
+            response = client.chat.completions.create(
+                model="llama-3-sonar-large-32k-online",
+                messages=messages,
+            )
+            respuesta = response.choices[0].message.content.strip()
+            json_match = re.search(r'\[\s*\{.*\}\s*\]', respuesta, re.DOTALL)
+            flag_answer = True
+            json_content = json_match.group(0)
+            # Convertir el texto JSON en un objeto JSON de Python
+            json_data = json.loads(json_content)
+            print("Generado")
+            return json_data
+        except Exception as e:
+            if flag_answer:
+                print(f"Error al decodificar JSON: {e}")
+                print(respuesta)
+                print(f"Retrying...")
+                print("================================================================")
+            else:
+                print("Error 429")
+                print(e)
+                print(f"Rate limit exceeded. Retrying in {delay} seconds...")
+                print("================================================================")
+                time.sleep(delay)
+    
+    #raise Exception("Failed to fetch data after several retries")
+    return json.loads('[]')

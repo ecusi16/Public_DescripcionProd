@@ -56,6 +56,8 @@ def verificar_fila_enlaces(row, key1, key2):
                 return False
         return True
     except Exception as e:
+        print("Enlace no valido")
+        print(e)
         return False
 
 ##################### CONVERT functions ############################

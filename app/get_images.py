@@ -54,6 +54,7 @@ def buscar_articulo(nombre_articulo):
     return obtener_enlaces_busqueda(query)[0]
 
 
+
 def obtener_3_imagenes(lista_urls):
     # Extraer los enlaces de las imágenes
     image_links = []
@@ -76,30 +77,35 @@ def obtener_3_imagenes(lista_urls):
                 re.compile(r'carousel.*'),
                 re.compile(r'slider.*'),
                 re.compile(r'image-view--wrap.*'),
+                re.compile(r'image-container.*'),
+                re.compile(r'product-image.*'),
                 re.compile(r'.*gallery.*'),
                 # Agrega otros patrones aquí
             ]
 
+            images_current_link = []
             # Buscar imágenes en posibles carruseles
             for pattern in carousel_patterns:
                 carousels = soup.find_all('div', {"class":pattern})
                 for carousel in carousels:
+                    print("Entra")
                     images = carousel.find_all('img')
                     for img in images:
                         image_url = img.get('src')
-                        if es_enlace_valido(image_url) and image_url not in image_links:
-                            image_links.append(image_url)
+                        if (not 'width=150' in image_url) and es_enlace_valido(image_url) and image_url not in images_current_link:
+                            if not img.find_parent(class_=re.compile(r'.*navbar.*')) or not img.find_parent(class_=re.compile(r'.*header.*')) or\
+                            not img.find_parent('nav') or not img.find_parent('header'):
+                            
+                                images_current_link.append(image_url)
 
-            # Si no se encontraron imágenes en carruseles, buscar una imagen principal
-            if not image_links:
-                main_image = soup.find('img')
-                if main_image:
-                    image_url = main_image.get('src')
-
-            if len(image_links)>=3:
-                return image_links
-        except:
-            return image_links
+            if len(images_current_link) <= 4:
+                image_links = image_links + images_current_link
+                if len(image_links) > 3:
+                    return image_links
+        except Exception as e:
+            print("Obteniendo imagenes")
+            print(e)
+            
     return image_links
 
 def obtener_imagenes_articulo(nombre_articulo):

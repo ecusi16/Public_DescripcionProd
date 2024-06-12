@@ -75,11 +75,13 @@ def main():
                     print("Busqueda google")
                     print(t2-t1)
 
+                    # obtener imagenes de los productos
                     t1 = datetime.now()
                     df['Imagenes'] = aplicar_en_paralelo(df, obtener_3_imagenes)
                     t2 = datetime.now()
-                    print("Scrapping")
+                    print('Scrapping')
                     print(t2-t1)
+                    #df['Imagenes'] = df['enlaces'].apply(lambda x: [])
 
                     for i in range(0, len(df), 2):
                         # Seleccionar dos filas
@@ -198,6 +200,5 @@ def main():
         st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")
     
             
-        
 if __name__ == "__main__":
     main()
