@@ -58,10 +58,15 @@ def main():
                 st.error("El archivo contiene filas completamente vacías, por favor virifique que el archivo no contenga filas vacias y que solo tenga una cabecera general ('codigo', 'marca', 'nombre')")
             st.write("Vista previa de los datos:")
             st.dataframe(df[['codigo', 'marca', 'nombre']])
+
+            extra_columns = list(set(df.columns) - set(['codigo', 'marca', 'nombre']))
             
             # Campo de entrada para el nombre del archivo
             export_file = os.path.splitext(uploaded_file.name)[0]
             file_name = st.text_input("Nombre base del archivo", value=export_file)
+
+            # Checkbox para seleccionar si se debe ejecutar una sección del código
+            ejecutar_seccion = st.checkbox("¿Buscar imágenes?", value=True)
 
             if st.button("Generar descripciones"):
                 with st.spinner('Ejecutando la función, por favor espere y no recargue la pagina...'):
@@ -75,13 +80,15 @@ def main():
                     print("Busqueda google")
                     print(t2-t1)
 
-                    # obtener imagenes de los productos
-                    t1 = datetime.now()
-                    df['Imagenes'] = aplicar_en_paralelo(df, obtener_3_imagenes)
-                    t2 = datetime.now()
-                    print('Scrapping')
-                    print(t2-t1)
-                    #df['Imagenes'] = df['enlaces'].apply(lambda x: [])
+                    if ejecutar_seccion:
+                        # obtener imagenes de los productos
+                        t1 = datetime.now()
+                        df['Imagenes'] = aplicar_en_paralelo(df, obtener_3_imagenes)
+                        t2 = datetime.now()
+                        print('Scrapping')
+                        print(t2-t1)
+                    else:
+                        df['Imagenes'] = df['enlaces'].apply(lambda x: [])
 
                     for i in range(0, len(df), 2):
                         # Seleccionar dos filas
@@ -117,8 +124,13 @@ def main():
                     results_df['Especificaciones'] = results_df['Especificaciones'].apply(format_list_as_bullets)
                     results_df['Ventajas'] = results_df['Ventajas'].apply(format_list_as_bullets)
 
+                    cols_exportar = ['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces'] +\
+                        ['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']+\
+                        ['codigo', 'marca', 'nombre']+['Enlaces1','Imagenes1']
+                    
+                    extra_cols = list(set(extra_columns) - set(cols_exportar))
                     df = df.rename(columns={'codigo': 'Codigo', 'marca': 'Marca', 'nombre': 'Nombre', 'enlaces': 'Enlaces'})
-                    results_df = df[['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces']].merge(\
+                    results_df = df[['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces']+extra_cols].merge(\
                         results_df[['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']], on='Codigo', how='left')
 
                     results_df['Enlaces1'] = results_df['Enlaces']
@@ -155,21 +167,23 @@ def main():
 
                     st.session_state['df_enlaces_validos'] = df_enlaces_validos
                     st.session_state['df_enlaces_invalidos'] = df_enlaces_invalidos
+                    st.session_state['extra_cols'] = extra_cols
 
             if 'df_enlaces_validos' in st.session_state:
                 # Mostrar el contenido del archivo CSV
                 df_enlaces_validos = st.session_state['df_enlaces_validos']
                 df_enlaces_invalidos = st.session_state['df_enlaces_invalidos']
+                extra_cols = st.session_state['extra_cols']
 
                 if  len(df_enlaces_invalidos)>0:
                     st.write("Descarga las tablas en excel:")
                 else:
                     st.write("Descarga la tabla de resultados:")
 
+                cols_exportar1 = ['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
                 if st.download_button(
                         label=f"Descargar descripciones validas: {len(df_enlaces_validos)} productos",
-                        data=convert_df_to_xlsx(df_enlaces_validos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
-                                        ]]),
+                        data=convert_df_to_xlsx(df_enlaces_validos[cols_exportar1+extra_cols]),
                         file_name=f'{file_name}_descripciones.xlsx',
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     ):
@@ -177,10 +191,11 @@ def main():
 
                 if len(df_enlaces_invalidos)>0:
                     df_enlaces_invalidos1 = df_enlaces_invalidos.rename(columns={'Codigo': 'codigo', 'Marca': 'marca', 'Nombre': 'nombre'})
+                    cols_exportar2 = ['codigo', 'marca', 'nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
+                    
                     if st.download_button(
                         label=f"Descargar descripciones para revision: {len(df_enlaces_invalidos)} productos",
-                        data=convert_df_to_xlsx(df_enlaces_invalidos1[['codigo', 'marca', 'nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1'
-                                        ]]),
+                        data=convert_df_to_xlsx(df_enlaces_invalidos1[cols_exportar2+extra_cols]),
                         file_name=f'{file_name}_descripciones_a_revisar.xlsx',
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     ):
@@ -195,7 +210,7 @@ def main():
                 if len(df_enlaces_invalidos)>0:
                     st.write("Resultados que necesitan revision extra:")
                     st.write(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
-                                        ]].to_html(escape=False), unsafe_allow_html=True)
+                                        ]+extra_columns].to_html(escape=False), unsafe_allow_html=True)
     except Exception as e:
         print(e)
         st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")

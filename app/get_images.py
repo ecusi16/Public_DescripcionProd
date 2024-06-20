@@ -88,7 +88,7 @@ def obtener_3_imagenes(lista_urls):
             for pattern in carousel_patterns:
                 carousels = soup.find_all('div', {"class":pattern})
                 for carousel in carousels:
-                    print("Entra")
+                    #print("Entra")
                     images = carousel.find_all('img')
                     for img in images:
                         image_url = img.get('src')
