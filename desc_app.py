@@ -210,7 +210,7 @@ def main():
                 if len(df_enlaces_invalidos)>0:
                     st.write("Resultados que necesitan revision extra:")
                     st.write(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
-                                        ]+extra_columns].to_html(escape=False), unsafe_allow_html=True)
+                                        ]+extra_cols].to_html(escape=False), unsafe_allow_html=True)
     except Exception as e:
         print(e)
         st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")
