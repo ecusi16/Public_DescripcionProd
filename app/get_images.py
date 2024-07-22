@@ -3,16 +3,18 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-def obtener_enlaces_busqueda(query):
+def obtener_enlaces_busqueda_1(query):
     """enlaces = []
     for resultado in search(query, num_results=num_links):
         enlaces.append(resultado)
     return enlaces"""
     # Realizar la búsqueda y obtener el primer resultado
+    print(query)
     try:
         first_result = next(search(query, num_results=3))
         return first_result
     except StopIteration:
+        print("obtener_enlaces_busqueda excepcion")
         return None
     
 def es_enlace_video(enlace):
@@ -25,29 +27,42 @@ def es_enlace_video(enlace):
 # Función para verificar si un enlace es válido
 def es_enlace_valido(url):
     try:
-        response = requests.head(url, allow_redirects=True)
+        response = requests.head(url, allow_redirects=True, timeout=5)
         return response.status_code == 200
+    except requests.Timeout:
+        return False
     except requests.RequestException:
         return False
 
 def obtener_enlaces_busqueda(row):
-    num_links=3
-    query = '"{}" "{}"'.format(row.codigo, row.marca)
-                 
-    second_option = '"{}" ("{}")'.format(row.marca, row.nombre)
-    enlaces = []
-    for i, resultado in enumerate(search(query, country="BO"), 1):
-        if not es_enlace_video(resultado) and es_enlace_valido(resultado):
-            enlaces.append(resultado)
-        if len(enlaces) == num_links:
-            break
-    if len(enlaces)==0:
-        for i, resultado in enumerate(search(second_option, country="BO"), 1):
-            if not es_enlace_video(resultado) and es_enlace_valido(resultado):
-                enlaces.append(resultado)
-            if len(enlaces) == num_links:
+    try:
+        num_links=3
+        query = '"{}" "{}"'.format(row.codigo, row.marca)             
+        second_option = '"{}" ("{}")'.format(row.marca, row.nombre)
+        enlaces = []
+        j = 10
+        for i, resultado in enumerate(search(query, country="BO"), 1):
+            if i<j:
+                if not es_enlace_video(resultado) and es_enlace_valido(resultado):
+                    enlaces.append(resultado)
+                if len(enlaces) == num_links:
+                    break
+            else:
                 break
-    return enlaces
+        if len(enlaces)==0:
+            print(row.nombre)
+            j = 10
+            for i, resultado in enumerate(search(second_option, country="BO"), 1):
+                if i>j:
+                    if not es_enlace_video(resultado) and es_enlace_valido(resultado):
+                        enlaces.append(resultado)
+                    if len(enlaces) == num_links:
+                        break
+                else:
+                    break
+        return enlaces
+    except Exception as e:
+        return enlaces
 
 def buscar_articulo(nombre_articulo):
     query = input(nombre_articulo)

@@ -70,6 +70,7 @@ def main():
 
             if st.button("Generar descripciones"):
                 with st.spinner('Ejecutando la función, por favor espere y no recargue la pagina...'):
+                    print("Entra a cargar descripciones ..............")
                     results = []
                     json_result = None
                     lista_productos = []
@@ -109,12 +110,15 @@ def main():
 
                     # Combinar los JSONs
                     for json_obj in results:
+                        print(json_obj)
                         if json_result is None:
                             json_result = json_obj
                         else:
                             json_result = json_result + json_obj
-                    
+                    print("==================================================================")
+                    print(json_result)
                     results_df = pd.DataFrame(json_result)
+                    print(results_df.columns)
 
                     t1 = datetime.now()
 

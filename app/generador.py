@@ -25,6 +25,8 @@ def get_description(product_json):
         Recuerda que sólo devuelves y respondes con JSON válido e iterable compatible con RFC8259 en tus respuestas
         ¡Gracias!
     """
+    print(product_json)
+    print("-----------------------------------------------------------------")
     prompt_user = ("lista de productos: {}").format(product_json)
 
     # Crear el cliente de OpenAI

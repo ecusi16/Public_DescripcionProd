@@ -107,9 +107,17 @@ def parallel_verificar_enlaces(df, enlaces_col, imagenes_col, num_workers=4):
 
 # Función para aplicar web scraping en paralelo
 def aplicar_en_paralelo(df, func, max_workers=5):
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        resultados = list(executor.map(func, [row for index, row in df.iterrows()]))
-    return resultados
+    try:
+        print(f"Entra a ejecutar en paralelo - {func}")
+        print([row for index, row in df.iterrows()])
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            print("Starting parallel processing----------------------------------------")
+            resultados = list(executor.map(func, [row for index, row in df.iterrows()]))
+            print("Finished parallel processing----------------------------------------")
+        return resultados
+    except Exception as e:
+        print(e)
+        return None
 
 # Función para aplicar la formateo a una columna
 def apply_formatting(df, column, func):
