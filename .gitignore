@@ -1,0 +1,4 @@
+.strealit/
+venv/
+app/__pycache__/
+.devcontainer/
