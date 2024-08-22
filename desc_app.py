@@ -7,7 +7,7 @@ from datetime import datetime
 
 from app.generador import get_description
 from app.get_images import obtener_enlaces_busqueda, obtener_3_imagenes
-from app.helper import format_list_as_bullets, format_list_as_bullets_and_links
+from app.helper import format_list_as_bullets, format_list_as_bullets_and_links, format_all_descriptions, format_row_as_html
 from app.helper import check_required_columns, check_empty_rows, verificar_fila_enlaces
 from app.helper import convert_df_to_xlsx
 from app.helper import aplicar_en_paralelo, parallel_verificar_enlaces
@@ -66,7 +66,8 @@ def main():
             file_name = st.text_input("Nombre base del archivo", value=export_file)
 
             # Checkbox para seleccionar si se debe ejecutar una sección del código
-            ejecutar_seccion = st.checkbox("¿Buscar imágenes?", value=True)
+            #ejecutar_seccion = st.checkbox("¿Buscar imágenes?", value=True)
+            ejecutar_seccion = False
 
             if st.button("Generar descripciones"):
                 with st.spinner('Ejecutando la función, por favor espere y no recargue la pagina...'):
@@ -118,30 +119,29 @@ def main():
                     print("==================================================================")
                     print(json_result)
                     results_df = pd.DataFrame(json_result)
-                    print(results_df.columns)
 
                     t1 = datetime.now()
 
-                    results_df['Especificaciones1'] = results_df['Especificaciones']
-                    results_df['Ventajas1'] = results_df['Ventajas']
+                    results_df['DescripcionHTML'] = results_df.apply(lambda x: format_row_as_html(x), axis=1)
+                    results_df['TextoHtml'] = results_df['DescripcionHTML'].apply(lambda x: x.replace("\n", ""))
 
-                    results_df['Especificaciones'] = results_df['Especificaciones'].apply(format_list_as_bullets)
-                    results_df['Ventajas'] = results_df['Ventajas'].apply(format_list_as_bullets)
+                    #results_df['Especificaciones1'] = results_df['Especificaciones']
+                    #results_df['Ventajas1'] = results_df['Ventajas']
 
-                    cols_exportar = ['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces'] +\
-                        ['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']+\
-                        ['codigo', 'marca', 'nombre']+['Enlaces1','Imagenes1']
+                    #results_df['Especificaciones'] = results_df['Especificaciones'].apply(format_list_as_bullets)
+                    #results_df['Ventajas'] = results_df['Ventajas'].apply(format_list_as_bullets)
+
+                    cols_exportar = ['Codigo', 'Marca', 'Nombre', 'TextoHtml', 'Enlaces']
+                    # ['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']+\
                     
                     extra_cols = list(set(extra_columns) - set(cols_exportar))
                     df = df.rename(columns={'codigo': 'Codigo', 'marca': 'Marca', 'nombre': 'Nombre', 'enlaces': 'Enlaces'})
                     results_df = df[['Codigo', 'Marca', 'Nombre','Imagenes', 'Enlaces']+extra_cols].merge(\
-                        results_df[['Descripcion', 'Codigo', 'Especificaciones1', 'Especificaciones', 'Ventajas1', 'Ventajas']], on='Codigo', how='left')
+                        results_df[['Codigo', 'Descripcion', 'DescripcionHTML', 'TextoHtml']], on='Codigo', how='left')
 
-                    results_df['Enlaces1'] = results_df['Enlaces']
-                    results_df['Enlaces'] = results_df['Enlaces'].apply(format_list_as_bullets_and_links)
 
-                    results_df['Imagenes1'] = results_df['Imagenes']
-                    results_df['Imagenes'] = results_df['Imagenes'].apply(format_list_as_bullets_and_links)
+                    #results_df['Imagenes1'] = results_df['Imagenes']
+                    #results_df['Imagenes'] = results_df['Imagenes'].apply(format_list_as_bullets_and_links)
                     
                     t2 = datetime.now()
                     print("Format time")
@@ -150,10 +150,12 @@ def main():
                     t1 = datetime.now()
                     # Aplicar la verificación de enlaces en paralelo
                     if len(results_df) > 20:
-                        results_df = parallel_verificar_enlaces(results_df, 'Enlaces1', 'Imagenes1')
+                        results_df = parallel_verificar_enlaces(results_df, 'Enlaces', 'Imagenes')
                     else: 
-                        results_df['enlaces_validos'] = results_df.apply(lambda x: verificar_fila_enlaces(x, 'Enlaces1', 'Imagenes1'), axis=1)
+                        results_df['enlaces_validos'] = results_df.apply(lambda x: verificar_fila_enlaces(x, 'Enlaces', 'Imagenes'), axis=1)
                     
+                    #results_df['Enlaces1'] = results_df['Enlaces']
+                    results_df['Enlaces'] = results_df['Enlaces'].apply(format_list_as_bullets_and_links)
                     t2 = datetime.now()
                     print("verificar enlaces")
                     print(t2-t1)
@@ -171,6 +173,7 @@ def main():
 
                     st.session_state['df_enlaces_validos'] = df_enlaces_validos
                     st.session_state['df_enlaces_invalidos'] = df_enlaces_invalidos
+                    print(extra_cols)
                     st.session_state['extra_cols'] = extra_cols
 
             if 'df_enlaces_validos' in st.session_state:
@@ -184,7 +187,7 @@ def main():
                 else:
                     st.write("Descarga la tabla de resultados:")
 
-                cols_exportar1 = ['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
+                cols_exportar1 = ['Codigo', 'Marca', 'Nombre', 'DescripcionHTML'] #['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
                 if st.download_button(
                         label=f"Descargar descripciones validas: {len(df_enlaces_validos)} productos",
                         data=convert_df_to_xlsx(df_enlaces_validos[cols_exportar1+extra_cols]),
@@ -195,7 +198,7 @@ def main():
 
                 if len(df_enlaces_invalidos)>0:
                     df_enlaces_invalidos1 = df_enlaces_invalidos.rename(columns={'Codigo': 'codigo', 'Marca': 'marca', 'Nombre': 'nombre'})
-                    cols_exportar2 = ['codigo', 'marca', 'nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
+                    cols_exportar2 = ['Codigo', 'Marca', 'Nombre', 'DescripcionHTML'] # ['codigo', 'marca', 'nombre', 'Descripcion', 'Especificaciones1', 'Ventajas1', 'Enlaces1','Imagenes1']
                     
                     if st.download_button(
                         label=f"Descargar descripciones para revision: {len(df_enlaces_invalidos)} productos",
@@ -207,14 +210,14 @@ def main():
 
 
                 st.write("Resultados obtenidos:")
-                st.write(df_enlaces_validos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
-                                    ]].to_html(escape=False), unsafe_allow_html=True)
+                st.write(df_enlaces_validos[['Codigo', 'Marca', 'Nombre', 'TextoHtml', 'Enlaces']].to_html(col_space={"TextoHtml": 400, "Enlaces": 150}, escape=False), unsafe_allow_html=True) #['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
+                                    
 
                 # Mostrar el contenido del archivo CSV
                 if len(df_enlaces_invalidos)>0:
                     st.write("Resultados que necesitan revision extra:")
-                    st.write(df_enlaces_invalidos[['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
-                                        ]+extra_cols].to_html(escape=False), unsafe_allow_html=True)
+                    st.write(df_enlaces_invalidos[ ['Codigo', 'Marca', 'Nombre', 'TextoHtml', 'Enlaces']+extra_cols].to_html(col_space={"TextoHtml": 400, "Enlaces": 150}, escape=False), unsafe_allow_html=True) #['Codigo', 'Marca', 'Nombre', 'Descripcion', 'Especificaciones', 'Ventajas', 'Enlaces','Imagenes'
+                                        
     except Exception as e:
         print(e)
         st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")

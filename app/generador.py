@@ -18,6 +18,7 @@ def get_description(product_json):
         - proporcionar de 7-10 especificaciones de cada producto en viñetas.
         - proporcionar de 5 - 7 de las ventajas clave de cada producto en viñetas.
         - Incluir los enlaces directos de las fuentes de donde extragiste la informacion de los productos, asegurándote de que estén activos y no devuelvan errores 404, no debes incluir enlaces vacíos o que no devuelvan contenido relevante. 
+        - No menciones como ventajas o especificaciones precio o cualquier tipo de garantia.
 
         Por favor, devuelve estos datos en formato lista de JSON que tenga las siguientes llaves por cada producto, es decir un json por cada producto dentro de una lista: 
         [{\"Codigo\": valor, \"Marca\": valor, \"Nombre\": valor, \"Descripcion\": valor, \"Especificaciones\": valor, \"Ventajas\":valor, \"Enlaces\":valor}, {...} ].
@@ -46,7 +47,6 @@ def get_description(product_json):
 
     retries = 5
     delay = 5  # Puedes ajustar el tiempo de espera entre reintentos
-    
 
     for attempt in range(retries):
         flag_answer = False
