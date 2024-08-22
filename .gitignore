@@ -1,4 +1,4 @@
-.strealit/
+.streamlit/
 venv/
 app/__pycache__/
 .devcontainer/
