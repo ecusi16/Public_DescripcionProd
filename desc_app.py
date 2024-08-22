@@ -220,8 +220,8 @@ def main():
                                         
     except Exception as e:
         print(e)
-        #st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")
-        st.error(e)
+        st.error("Ha ocurrido un error inesperado. Por favor, recarga la página.")
+        #st.error(e)
     
             
 if __name__ == "__main__":
